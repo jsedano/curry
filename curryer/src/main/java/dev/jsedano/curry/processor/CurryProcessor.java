@@ -7,6 +7,7 @@ import dev.jsedano.curry.util.PrimitiveWrapper;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javax.annotation.processing.*;
 import javax.lang.model.SourceVersion;
@@ -30,13 +31,27 @@ public class CurryProcessor extends AbstractProcessor {
 
       Set<? extends Element> annotatedElements = roundEnv.getElementsAnnotatedWith(annotation);
 
-      Map<Boolean, List<Element>> annotatedMethods = annotatedElements.stream().collect(Collectors.partitioningBy(element -> ((ExecutableType) element.asType()).getParameterTypes().size() > 1 && ((ExecutableType) element.asType()).getParameterTypes().size() < 11));
-
+      Map<Boolean, List<Element>> annotatedMethods =
+          annotatedElements.stream()
+              .collect(
+                  Collectors.partitioningBy(
+                      element ->
+                          ((ExecutableType) element.asType()).getParameterTypes().size() > 1
+                              && ((ExecutableType) element.asType()).getParameterTypes().size()
+                                  < 11));
 
       List<Element> methodsToCurry = annotatedMethods.get(true);
       List<Element> otherMethods = annotatedMethods.get(false);
 
-      otherMethods.stream().forEach(e ->processingEnv.getMessager().printMessage(Diagnostic.Kind.MANDATORY_WARNING, "incorrect number of parameters, allowed only between 2 and 1O, will not generate code for this one", e));
+      otherMethods.stream()
+          .forEach(
+              e ->
+                  processingEnv
+                      .getMessager()
+                      .printMessage(
+                          Diagnostic.Kind.MANDATORY_WARNING,
+                          "incorrect number of parameters, allowed only between 2 and 1O, will not generate code for this one",
+                          e));
 
       if (methodsToCurry.isEmpty()) {
         continue;
@@ -106,13 +121,16 @@ public class CurryProcessor extends AbstractProcessor {
             out.print("    public static ");
             out.print(getReturnType(argumentsType, returnType));
             out.print(" ");
-            out.print(setter.getConstructor() ? "curry" : setter.getName());
+            out.print(
+                setter.getConstructor()
+                    ? FunctionSelector.getFunctionShortName(argumentsType.size()) + "Constructor"
+                    : setter.getName());
 
             out.print("(");
             out.print(getArgument(argumentsType, returnType));
 
             out.println(") {");
-            out.print(getBody(argumentsType.size()));
+            out.print(getBody(argumentsType.size(), !"void".equals(returnType)));
             out.println("}");
             out.println();
           });
@@ -126,6 +144,9 @@ public class CurryProcessor extends AbstractProcessor {
   }
 
   private String getReturnType(List<String> methods, String returnType, int i) {
+    if (i == methods.size() - 1 && "void".equals(returnType)) {
+      return String.format("%s<%s>", Consumer.class.getName(), methods.get(i));
+    }
     if (i == methods.size()) {
       return returnType;
     }
@@ -142,9 +163,14 @@ public class CurryProcessor extends AbstractProcessor {
     if (i == 0) {
       return String.format(
           "%s<%s,%s",
-          FunctionSelector.getFunction(methods.size()),
+          "void".equals(returnType)
+              ? FunctionSelector.getConsumer(methods.size())
+              : FunctionSelector.getFunction(methods.size()),
           methods.get(i),
           getArgument(methods, returnType, i + 1));
+    }
+    if (i == methods.size() - 1 && "void".equals(returnType)) {
+      return String.format("%s> function", methods.get(i), getArgument(methods, returnType, i + 1));
     }
     if (i == methods.size()) {
       return String.format("%s> function", returnType);
@@ -152,10 +178,11 @@ public class CurryProcessor extends AbstractProcessor {
     return String.format("%s,%s", methods.get(i), getArgument(methods, returnType, i + 1));
   }
 
-  private String getBody(int parameterCount) {
+  private String getBody(int parameterCount, boolean isFunction) {
     return String.format(
-        "return %s function.apply(%s);",
-        getLambdaArrows(parameterCount, 0), getFunctionCallParameters(parameterCount, 0));
+        isFunction ? "return %s function.apply(%s);" : "return %s function.accept(%s);",
+        getLambdaArrows(parameterCount, 0),
+        getFunctionCallParameters(parameterCount, 0));
   }
 
   private String getLambdaArrows(int parameterCount, int i) {

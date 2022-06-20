@@ -16,7 +16,6 @@ public final class PrimitiveWrapper {
           put("int", Integer.class.getName());
           put("long", Long.class.getName());
           put("short", Short.class.getName());
-          put("void", Void.class.getName());
         }
       };
 
