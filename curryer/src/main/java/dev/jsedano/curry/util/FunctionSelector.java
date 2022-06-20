@@ -24,26 +24,24 @@ public final class FunctionSelector {
   private static final String[] consumerArray = {
     Consumer.class.getName(),
     BiConsumer.class.getName(),
-    TriFunction.class.getName(),
-    TetraFunction.class.getName(),
-    PentaFunction.class.getName(),
-    HexaFunction.class.getName(),
-    HeptaFunction.class.getName(),
-    OctaFunction.class.getName(),
-    NonaFunction.class.getName(),
-    DecaFunction.class.getName()
+    TriConsumer.class.getName(),
+    TetraConsumer.class.getName(),
+    PentaConsumer.class.getName(),
+    HexaConsumer.class.getName(),
+    HeptaConsumer.class.getName(),
+    OctaConsumer.class.getName(),
+    NonaConsumer.class.getName(),
+    DecaConsumer.class.getName()
   };
 
-  public static String getFunction(int parameters) {
-    return functionArray[parameters - 1];
-  }
-
-  public static String getConsumer(int parameters) {
-    return consumerArray[parameters - 1];
+  public static String getFunction(int parameters, FunctionType functionType) {
+    return functionType == FunctionType.FUNCTION
+        ? functionArray[parameters - 1]
+        : consumerArray[parameters - 1];
   }
 
   public static String getFunctionShortName(int parameters) {
-    String functionName = getFunction(parameters);
+    String functionName = getFunction(parameters, FunctionType.FUNCTION);
     return functionName
         .substring(functionName.lastIndexOf('.') + 1, functionName.lastIndexOf('F'))
         .toLowerCase();
