@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 public class CurrucucuTest {
 
   @Test
-  public void whenBuildPersonWithBuilder_thenObjectHasPropertyValues() {
+  public void test() {
 
     var factory = CurrucucuCurryer.curry(Currucucu::new);
     var holaFactory = factory.apply("hola");

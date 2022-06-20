@@ -20,31 +20,15 @@ public class MethodDTO {
     return name;
   }
 
-  public void setName(String name) {
-    this.name = name;
-  }
-
   public List<String> getParameters() {
     return parameters;
-  }
-
-  public void setParameters(List<String> parameters) {
-    this.parameters = parameters;
   }
 
   public String getReturnType() {
     return returnType;
   }
 
-  public void setReturnType(String returnType) {
-    this.returnType = returnType;
-  }
-
   public Boolean getConstructor() {
     return isConstructor;
-  }
-
-  public void setConstructor(Boolean constructor) {
-    isConstructor = constructor;
   }
 }

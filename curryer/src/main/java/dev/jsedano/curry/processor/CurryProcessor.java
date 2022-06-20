@@ -15,6 +15,7 @@ import javax.lang.model.element.ElementKind;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.ExecutableType;
 import javax.lang.model.type.TypeMirror;
+import javax.tools.Diagnostic;
 import javax.tools.JavaFileObject;
 
 @SupportedAnnotationTypes("dev.jsedano.curry.annotation.Curry")
@@ -29,35 +30,37 @@ public class CurryProcessor extends AbstractProcessor {
 
       Set<? extends Element> annotatedElements = roundEnv.getElementsAnnotatedWith(annotation);
 
-      // lets make sure around here that only methods with more than one parameter are annotated
-      Map<Boolean, List<Element>> annotatedMethods =
-          annotatedElements.stream().collect(Collectors.partitioningBy(element -> (true)));
+      Map<Boolean, List<Element>> annotatedMethods = annotatedElements.stream().collect(Collectors.partitioningBy(element -> ((ExecutableType) element.asType()).getParameterTypes().size() > 1 && ((ExecutableType) element.asType()).getParameterTypes().size() < 11));
 
-      List<Element> setters = annotatedMethods.get(true);
 
-      if (setters.isEmpty()) {
+      List<Element> methodsToCurry = annotatedMethods.get(true);
+      List<Element> otherMethods = annotatedMethods.get(false);
+
+      otherMethods.stream().forEach(e ->processingEnv.getMessager().printMessage(Diagnostic.Kind.MANDATORY_WARNING, "incorrect number of parameters, allowed only between 2 and 1O, will not generate code for this one", e));
+
+      if (methodsToCurry.isEmpty()) {
         continue;
       }
 
       String className =
-          ((TypeElement) setters.get(0).getEnclosingElement()).getQualifiedName().toString();
+          ((TypeElement) methodsToCurry.get(0).getEnclosingElement()).getQualifiedName().toString();
 
       List<MethodDTO> methodList =
-          setters.stream()
+          methodsToCurry.stream()
               .map(
-                  setter ->
+                  element ->
                       new MethodDTO(
-                          setter.getSimpleName().toString(),
-                          setter.getKind() == ElementKind.CONSTRUCTOR,
-                          ((ExecutableType) setter.asType())
+                          element.getSimpleName().toString(),
+                          element.getKind() == ElementKind.CONSTRUCTOR,
+                          ((ExecutableType) element.asType())
                               .getParameterTypes().stream()
                                   .map(TypeMirror::toString)
                                   .map(PrimitiveWrapper::wrapIfPrimitive)
                                   .toList(),
-                          setter.getKind() == ElementKind.CONSTRUCTOR
+                          element.getKind() == ElementKind.CONSTRUCTOR
                               ? className
                               : PrimitiveWrapper.wrapIfPrimitive(
-                                  ((ExecutableType) setter.asType()).getReturnType().toString())))
+                                  ((ExecutableType) element.asType()).getReturnType().toString())))
               .toList();
 
       try {
@@ -78,7 +81,6 @@ public class CurryProcessor extends AbstractProcessor {
       packageName = className.substring(0, lastDot);
     }
 
-    String simpleClassName = className.substring(lastDot + 1);
     String builderClassName = className + "Curryer";
     String builderSimpleClassName = builderClassName.substring(lastDot + 1);
 
@@ -91,7 +93,7 @@ public class CurryProcessor extends AbstractProcessor {
         out.println(";");
         out.println();
       }
-      out.print("public class ");
+      out.print("public final class ");
       out.print(builderSimpleClassName);
       out.println(" {");
       out.println();
@@ -102,21 +104,25 @@ public class CurryProcessor extends AbstractProcessor {
             List<String> argumentsType = setter.getParameters();
 
             out.print("    public static ");
-            out.print(getReturnType(argumentsType, returnType, 0));
+            out.print(getReturnType(argumentsType, returnType));
             out.print(" ");
             out.print(setter.getConstructor() ? "curry" : setter.getName());
 
             out.print("(");
-            out.print(getArgument(argumentsType, returnType, 0));
+            out.print(getArgument(argumentsType, returnType));
 
             out.println(") {");
-            out.print(getBody3(argumentsType, 0));
+            out.print(getBody(argumentsType.size()));
             out.println("}");
             out.println();
           });
 
       out.println("}");
     }
+  }
+
+  private String getReturnType(List<String> methods, String returnType) {
+    return getReturnType(methods, returnType, 0);
   }
 
   private String getReturnType(List<String> methods, String returnType, int i) {
@@ -126,6 +132,10 @@ public class CurryProcessor extends AbstractProcessor {
     return String.format(
         "%s<%s,%s>",
         FunctionSelector.getFunction(1), methods.get(i), getReturnType(methods, returnType, i + 1));
+  }
+
+  private String getArgument(List<String> methods, String returnType) {
+    return getArgument(methods, returnType, 0);
   }
 
   private String getArgument(List<String> methods, String returnType, int i) {
@@ -142,29 +152,23 @@ public class CurryProcessor extends AbstractProcessor {
     return String.format("%s,%s", methods.get(i), getArgument(methods, returnType, i + 1));
   }
 
-  private String getBody(List<String> methods, int i) {
-    if (i == methods.size()) {
+  private String getBody(int parameterCount) {
+    return String.format(
+        "return %s function.apply(%s);",
+        getLambdaArrows(parameterCount, 0), getFunctionCallParameters(parameterCount, 0));
+  }
+
+  private String getLambdaArrows(int parameterCount, int i) {
+    if (i == parameterCount) {
       return "";
     }
-    return String.format("v%d -> %s", i, getBody(methods, i + 1));
+    return String.format("v%d->%s", i, getLambdaArrows(parameterCount, i + 1));
   }
 
-  private String getBody2(List<String> methods, int i) {
-    if (i == methods.size() - 1) {
+  private String getFunctionCallParameters(int parameterCount, int i) {
+    if (i == parameterCount - 1) {
       return String.format("v%d", i);
     }
-    return String.format("v%d,%s", i, getBody2(methods, i + 1));
+    return String.format("v%d,%s", i, getFunctionCallParameters(parameterCount, i + 1));
   }
-
-  private String getBody3(List<String> methods, int i) {
-    return String.format(
-        "return %s function.apply(%s);", getBody(methods, 0), getBody2(methods, 0));
-  }
-
-  /*
-    public static Function<Integer, Function<Integer, Integer>> toCurry(
-      BiFunction<Integer, Integer, Integer> function) {
-    return v -> v1 -> function.apply(v, v1);
-  }
-     */
 }

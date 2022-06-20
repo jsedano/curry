@@ -4,11 +4,14 @@ import dev.jsedano.curry.annotation.Curry;
 import java.awt.geom.Point2D;
 import java.util.List;
 
+
 public class Currucucu {
   private String s;
   private int i;
 
+  @Curry
   public Currucucu() {}
+
 
   @Curry
   public Currucucu(String s, Integer i) {
@@ -22,6 +25,18 @@ public class Currucucu {
     list.add(i + "");
     list.add(g);
     return list;
+  }
+
+  @Curry
+  public int sum(int[] a, int[] b) {
+    int res = 0;
+    for (int i : a) {
+      res += i;
+    }
+    for (int i : b) {
+      res += i;
+    }
+    return i;
   }
 
   @Curry
