@@ -1,7 +1,7 @@
 package dev.jsedano.curry.util.function;
 
 @FunctionalInterface
-public interface TetraConsumer<A, B, C, D, R> {
+public interface TetraConsumer<A, B, C, D> {
 
-  R apply(A a, B b, C c, D d);
+  void accept(A a, B b, C c, D d);
 }

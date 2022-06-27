@@ -1,7 +1,7 @@
 package dev.jsedano.curry.util.function;
 
 @FunctionalInterface
-public interface PentaConsumer<A, B, C, D, E, R> {
+public interface PentaConsumer<A, B, C, D, E> {
 
-  R apply(A a, B b, C c, D d, E e);
+  void accept(A a, B b, C c, D d, E e);
 }

@@ -6,6 +6,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 
 public class AnnotatedClassTest {
@@ -90,5 +92,14 @@ public class AnnotatedClassTest {
     var result = staticMethod.apply(0).apply(1);
     assertEquals(expected[0], result[0]);
     assertEquals(expected[1], result[1]);
+  }
+
+  @Test
+  public void tetraConsumerTest() {
+    var pentaConsumer = AnnotatedClassCurryer.pentaConsumer(AnnotatedClass::pentaConsumer);
+    List<String> list = new LinkedList<>();
+    pentaConsumer.apply(1).apply('C').apply(true).apply("theString").accept(list::add);
+
+    assertEquals("theString", list.get(0));
   }
 }

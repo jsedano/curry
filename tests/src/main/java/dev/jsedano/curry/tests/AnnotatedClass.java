@@ -6,6 +6,8 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class AnnotatedClass {
 
@@ -132,5 +134,10 @@ public class AnnotatedClass {
     result = 31 * result + (anEnum != null ? anEnum.hashCode() : 0);
     result = 31 * result + (anAnnotatedClass != null ? anAnnotatedClass.hashCode() : 0);
     return result;
+  }
+
+  @Curry
+  public static void pentaConsumer(int x, char c, boolean b, String z, Consumer<String> consumer){
+    consumer.accept(z);
   }
 }
